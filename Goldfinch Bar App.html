@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goldfinch Bar — Dish Costing</title>
+<meta name="apple-mobile-web-app-title" content="Goldfinch Bar">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2f6f4f">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232f6f4f'/%3E%3Ctext x='50' y='66' font-size='40' font-family='Helvetica,Arial,sans-serif' font-weight='700' fill='white' text-anchor='middle'%3EGB%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#f5f4f1;
+    --panel:#ffffff;
+    --border:#e2e0da;
+    --text:#2b2a27;
+    --muted:#7a776e;
+    --accent:#2f6f4f;
+    --accent-light:#e7f2ec;
+    --danger:#b3432b;
+    --danger-light:#fbeae5;
+    --warn:#a67c1e;
+    --warn-light:#faf1dd;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .app{
+    display:flex;
+    height:100vh;
+  }
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:320px;
+    min-width:280px;
+    border-right:1px solid var(--border);
+    background:var(--panel);
+    display:flex;
+    flex-direction:column;
+  }
+  .sidebar-header{
+    padding:18px 16px 12px;
+    border-bottom:1px solid var(--border);
+  }
+  .sidebar-header h1{
+    font-size:17px;
+    margin:0 0 10px;
+    font-weight:600;
+  }
+  .search-row{
+    display:flex;
+    gap:8px;
+  }
+  .search-row input{
+    flex:1;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:13px;
+    background:var(--bg);
+  }
+  .new-btn{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:13px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .new-btn:hover{opacity:.9;}
+  .dish-list{
+    flex:1;
+    overflow-y:auto;
+    padding:8px;
+  }
+  .dish-card{
+    padding:10px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    margin-bottom:4px;
+    border:1px solid transparent;
+  }
+  .dish-card:hover{background:var(--bg);}
+  .dish-card.active{
+    background:var(--accent-light);
+    border-color:var(--accent);
+  }
+  .dish-card .name{
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:4px;
+    display:flex;
+    justify-content:space-between;
+    gap:6px;
+  }
+  .dish-card .meta{
+    font-size:12px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+  }
+  .pill{
+    font-size:11px;
+    padding:1px 7px;
+    border-radius:20px;
+    font-weight:600;
+  }
+  .pill.good{background:var(--accent-light);color:var(--accent);}
+  .pill.warn{background:var(--warn-light);color:var(--warn);}
+  .pill.bad{background:var(--danger-light);color:var(--danger);}
+  .empty-list{
+    padding:24px 16px;
+    color:var(--muted);
+    font-size:13px;
+    text-align:center;
+  }
+  .sidebar-footer{
+    padding:10px 12px;
+    border-top:1px solid var(--border);
+    display:flex;
+    gap:8px;
+  }
+  .ghost-btn{
+    flex:1;
+    background:none;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:7px 8px;
+    font-size:12px;
+    cursor:pointer;
+    color:var(--text);
+  }
+  .ghost-btn:hover{background:var(--bg);}
+
+  .folder-row{
+    padding:8px 8px 0;
+  }
+  .folder-row .ghost-btn{
+    width:100%;
+  }
+
+  .category-section{
+    margin-bottom:4px;
+  }
+  .category-header{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 8px;
+    border-radius:8px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .category-header:hover{background:var(--bg);}
+  .category-header .chevron{
+    font-size:10px;
+    color:var(--muted);
+    width:10px;
+    flex-shrink:0;
+    transition:transform .15s ease;
+  }
+  .category-header.collapsed .chevron{ transform:rotate(-90deg); }
+  .category-header .cat-name{
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--text);
+    flex:1;
+  }
+  .category-header .cat-count{
+    font-size:11px;
+    color:var(--muted);
+    font-weight:500;
+  }
+  .cat-actions{
+    display:none;
+    gap:2px;
+  }
+  .category-header:hover .cat-actions{ display:flex; }
+  .cat-icon-btn{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:12px;
+    padding:3px 5px;
+    border-radius:5px;
+    line-height:1;
+  }
+  .cat-icon-btn:hover{background:var(--border);color:var(--text);}
+  .category-body{
+    padding:2px 0 6px;
+    border-radius:8px;
+    min-height:6px;
+  }
+  .category-body.drag-over{
+    background:var(--accent-light);
+    outline:2px dashed var(--accent);
+    outline-offset:-2px;
+  }
+  .category-body.collapsed{ display:none; }
+  .category-empty{
+    font-size:12px;
+    color:var(--muted);
+    padding:8px 12px;
+    font-style:italic;
+  }
+  .dish-card{ cursor:grab; }
+  .dish-card.dragging{ opacity:.4; }
+
+  /* ---------- Main ---------- */
+  .main{
+    flex:1;
+    overflow-y:auto;
+    padding:28px 36px 60px;
+  }
+  .empty-state{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100%;
+    color:var(--muted);
+    font-size:14px;
+    text-align:center;
+  }
+  .dish-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:20px;
+    gap:16px;
+  }
+  .dish-title-input{
+    font-size:24px;
+    font-weight:700;
+    border:none;
+    background:none;
+    width:100%;
+    padding:2px 0;
+    border-bottom:2px solid transparent;
+  }
+  .dish-title-input:focus{
+    outline:none;
+    border-bottom:2px solid var(--accent);
+  }
+  .dish-title-input::placeholder{
+    color:var(--muted);
+    opacity:.65;
+    font-weight:500;
+  }
+  .placeholder-name{
+    color:var(--muted);
+    opacity:.65;
+    font-weight:500;
+  }
+  .header-actions{
+    display:flex;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:7px 12px;
+    font-size:12px;
+    cursor:pointer;
+    color:var(--text);
+  }
+  .icon-btn:hover{background:var(--bg);}
+  .icon-btn.danger{color:var(--danger);border-color:#e8c9c0;}
+  .icon-btn.danger:hover{background:var(--danger-light);}
+
+  .sub-row{
+    display:flex;
+    gap:24px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .field label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--muted);
+    font-weight:600;
+  }
+  .field input,
+  .field select{
+    border:1px solid var(--border);
+    border-radius:7px;
+    padding:6px 9px;
+    font-size:13px;
+    background:var(--panel);
+    width:120px;
+  }
+  .field select{
+    width:180px;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:var(--muted);
+    margin:0 0 14px;
+    font-weight:700;
+  }
+
+  table.ing-table{
+    width:100%;
+    border-collapse:collapse;
+  }
+  table.ing-table th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:600;
+    padding:0 6px 8px;
+    border-bottom:1px solid var(--border);
+  }
+  table.ing-table td{
+    padding:6px;
+    border-bottom:1px solid #f0efea;
+    vertical-align:middle;
+  }
+  table.ing-table input{
+    width:100%;
+    border:1px solid transparent;
+    background:transparent;
+    padding:6px 7px;
+    border-radius:6px;
+    font-size:13px;
+  }
+  table.ing-table input:hover{border-color:var(--border);}
+  table.ing-table input:focus{
+    outline:none;
+    border-color:var(--accent);
+    background:var(--panel);
+  }
+  .col-name{width:26%;}
+  .col-qty{width:11%;}
+  .col-unit{width:11%;}
+  .col-yield{width:12%;}
+  .col-cost{width:15%;}
+  .col-total{width:15%;}
+  .col-del{width:5%;text-align:center;}
+  .row-total{
+    font-weight:600;
+    color:var(--text);
+  }
+  .del-row-btn{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:15px;
+    padding:2px 6px;
+    border-radius:6px;
+  }
+  .del-row-btn:hover{background:var(--danger-light);color:var(--danger);}
+  .add-row-btn{
+    margin-top:10px;
+    background:none;
+    border:1px dashed var(--border);
+    border-radius:7px;
+    padding:7px 12px;
+    font-size:12.5px;
+    cursor:pointer;
+    color:var(--muted);
+    width:100%;
+    text-align:left;
+  }
+  .add-row-btn:hover{background:var(--bg);color:var(--text);border-color:var(--accent);}
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px 28px;
+  }
+  .summary-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:6px 0;
+    border-bottom:1px solid #f0efea;
+    font-size:13.5px;
+  }
+  .summary-row .label{color:var(--muted);}
+  .summary-row .value{font-weight:600;}
+  .summary-row.big .value{font-size:19px;}
+  .summary-row.big .label{font-size:13.5px;font-weight:600;color:var(--text);}
+  .summary-row input.inline-input{
+    width:70px;
+    text-align:right;
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:4px 7px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .summary-row input.inline-input:focus{outline:none;border-color:var(--accent);}
+  .sub-note{
+    font-size:11px;
+    color:var(--muted);
+    font-weight:500;
+    margin-left:6px;
+  }
+
+  .status-banner{
+    margin-top:8px;
+    padding:10px 14px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .status-banner.good{background:var(--accent-light);color:var(--accent);}
+  .status-banner.warn{background:var(--warn-light);color:var(--warn);}
+  .status-banner.bad{background:var(--danger-light);color:var(--danger);}
+
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:#d8d5cd;border-radius:8px;}
+
+  .back-btn{ display:none; }
+
+  /* ---------- Mobile layout ---------- */
+  @media (max-width: 720px){
+    .app{
+      flex-direction:column;
+      height:100vh;
+      overflow:hidden;
+    }
+    .sidebar{
+      width:100%;
+      min-width:0;
+      height:100%;
+      border-right:none;
+      display:none;
+    }
+    .main{
+      width:100%;
+      height:100%;
+      padding:18px 16px 40px;
+      display:none;
+    }
+    body:not(.mobile-editor-view) .sidebar{ display:flex; }
+    body.mobile-editor-view .main{ display:block; }
+
+    .back-btn{
+      display:inline-block;
+      order:-1;
+    }
+    .dish-header{
+      flex-wrap:wrap;
+    }
+    .dish-title-input{
+      font-size:20px;
+    }
+
+    /* Bigger tap targets + 16px inputs avoid iOS auto-zoom-on-focus */
+    .new-btn, .ghost-btn, .icon-btn, .add-row-btn{
+      min-height:44px;
+      font-size:14px;
+    }
+    .del-row-btn{
+      min-width:36px;
+      min-height:36px;
+      font-size:18px;
+    }
+    .search-row input,
+    .field input,
+    .field select,
+    .summary-row input.inline-input,
+    table.ing-table input,
+    .dish-title-input{
+      font-size:16px;
+    }
+    .field select{
+      width:100%;
+      min-height:44px;
+    }
+    .category-header{
+      min-height:40px;
+    }
+    .cat-actions{ display:flex; }
+    .summary-row input.inline-input{
+      width:70px;
+      min-height:38px;
+    }
+    .summary-grid{
+      grid-template-columns:1fr;
+    }
+
+    /* Ingredient rows become stacked cards instead of a wide table */
+    table.ing-table thead{ display:none; }
+    table.ing-table, table.ing-table tbody, table.ing-table tr, table.ing-table td{
+      display:block;
+      width:100%;
+    }
+    table.ing-table tr{
+      border:1px solid var(--border);
+      border-radius:8px;
+      margin-bottom:10px;
+      padding:6px 10px;
+      position:relative;
+    }
+    table.ing-table td{
+      border-bottom:none;
+      padding:8px 0;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    table.ing-table td::before{
+      content:attr(data-label);
+      font-size:11px;
+      text-transform:uppercase;
+      color:var(--muted);
+      font-weight:600;
+      flex-shrink:0;
+    }
+    table.ing-table td input{
+      text-align:right;
+      flex:1;
+    }
+    .col-name input{ text-align:left; }
+    .col-del{
+      position:absolute;
+      top:4px;
+      right:4px;
+      width:auto;
+    }
+    .col-del::before{ content:none; }
+    .row-total{
+      font-size:15px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>Goldfinch Bar</h1>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Search dishes...">
+        <button class="new-btn" id="newDishBtn">+ Dish</button>
+      </div>
+      <div class="folder-row">
+        <button class="ghost-btn" id="newFolderBtn">+ New folder</button>
+      </div>
+    </div>
+    <div class="dish-list" id="dishList"></div>
+    <div class="sidebar-footer">
+      <button class="ghost-btn" id="exportBtn">Export backup</button>
+      <button class="ghost-btn" id="importBtn">Import backup</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+    </div>
+  </div>
+
+  <div class="main" id="mainPanel">
+    <div class="empty-state">Select a dish on the left, or create a new one to get started.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "goldfinchBarCostingApp.dishes.v1";
+  var CATEGORIES_KEY = "goldfinchBarCostingApp.categories.v1";
+  var CURRENCY = "kr";
+  var UNCATEGORIZED = ""; // reserved: empty string means "no folder assigned"
+
+  function uid(){
+    return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+
+  function blankIngredient(){
+    return { name:"", qty:0, unit:"mL", yieldPct:100, cost:0 };
+  }
+
+  function blankDish(name){
+    return {
+      id: uid(),
+      name: name || "",
+      covers: 1,
+      date: "",
+      targetFcos: 25,
+      moms: 25,
+      actualPrice: 0,
+      category: UNCATEGORIZED,
+      ingredients: [ blankIngredient(), blankIngredient(), blankIngredient() ]
+    };
+  }
+
+  function loadDishes(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      var parsed = JSON.parse(raw);
+      if(Array.isArray(parsed) && parsed.length){
+        parsed.forEach(function(d){ if(typeof d.category !== "string") d.category = UNCATEGORIZED; });
+        return parsed;
+      }
+      return null;
+    }catch(e){ return null; }
+  }
+
+  function saveDishes(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.dishes));
+  }
+
+  function loadCategories(){
+    try{
+      var raw = localStorage.getItem(CATEGORIES_KEY);
+      if(!raw) return null;
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    }catch(e){ return null; }
+  }
+
+  function saveCategories(){
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(state.categories));
+  }
+
+  // Pre-loaded from the restaurant's existing costing sheet. Used only the
+  // very first time the app runs on a device (before anything is saved).
+  var SEED_DISHES = [{"name":"","covers":1,"date":"","targetFcos":25,"moms":25,"actualPrice":0,"category":"","ingredients":[{"name":"","qty":0,"unit":"mL","yieldPct":100,"cost":0},{"name":"","qty":0,"unit":"mL","yieldPct":100,"cost":0},{"name":"","qty":0,"unit":"mL","yieldPct":100,"cost":0}]}];
+
+  function buildSeedDishes(){
+    return SEED_DISHES.map(function(raw){
+      return {
+        id: uid(),
+        name: raw.name,
+        covers: raw.covers,
+        date: raw.date || "",
+        targetFcos: raw.targetFcos,
+        moms: raw.moms,
+        actualPrice: raw.actualPrice,
+        category: raw.category || UNCATEGORIZED,
+        ingredients: raw.ingredients.map(function(ing){
+          return { name: ing.name, qty: ing.qty, unit: ing.unit, yieldPct: ing.yieldPct, cost: ing.cost };
+        })
+      };
+    });
+  }
+
+  var state = {
+    dishes: loadDishes() || buildSeedDishes(),
+    categories: loadCategories() || [],
+    selectedId: null,
+    search: "",
+    mobileView: "list", // "list" | "editor" — only matters on narrow/mobile screens
+    collapsed: {}
+  };
+  state.selectedId = state.dishes[0].id;
+
+  // ---------- Calculations (mirrors the source spreadsheet formulas) ----------
+  // Line total = cost * qty * ((100% - yield%) + 100%)
+  function lineTotal(ing){
+    var qty = Number(ing.qty) || 0;
+    var cost = Number(ing.cost) || 0;
+    var yieldFrac = (Number(ing.yieldPct) || 0) / 100;
+    var multiplier = (1 - yieldFrac) + 1; // e.g. 60% yield -> 1.4x
+    return cost * qty * multiplier;
+  }
+
+  function computeDish(dish){
+    var costOfDish = dish.ingredients.reduce(function(sum, ing){
+      return sum + lineTotal(ing);
+    }, 0);
+
+    var targetFcosFrac = (Number(dish.targetFcos) || 0) / 100;
+    var momsFrac = (Number(dish.moms) || 0) / 100;
+    var actualPrice = Number(dish.actualPrice) || 0;
+
+    var recommendedNetPrice = targetFcosFrac > 0 ? costOfDish / targetFcosFrac : 0;
+    var grossPrice = recommendedNetPrice * (1 + momsFrac);
+
+    var actualNetPrice = (1 + momsFrac) > 0 ? actualPrice / (1 + momsFrac) : 0;
+    var actualFoodCostPct = actualNetPrice > 0 ? (costOfDish / actualNetPrice) * 100 : null;
+    var actualProfit = actualNetPrice - costOfDish;
+
+    return {
+      costOfDish: costOfDish,
+      recommendedNetPrice: recommendedNetPrice,
+      grossPrice: grossPrice,
+      actualNetPrice: actualNetPrice,
+      actualFoodCostPct: actualFoodCostPct,
+      actualProfit: actualProfit
+    };
+  }
+
+  function fmt(n){
+    if(n === null || n === undefined || isNaN(n)) return "—";
+    return CURRENCY + " " + n.toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+  function fmtPct(n){
+    if(n === null || n === undefined || isNaN(n)) return "—";
+    return n.toFixed(1) + "%";
+  }
+
+  function statusClass(actualPct, targetPct){
+    if(actualPct === null) return "";
+    if(actualPct <= targetPct + 0.001) return "good";
+    if(actualPct <= targetPct + 5) return "warn";
+    return "bad";
+  }
+
+  // ---------- Rendering ----------
+  var dishListEl = document.getElementById("dishList");
+  var mainPanelEl = document.getElementById("mainPanel");
+
+  function getSelectedDish(){
+    return state.dishes.find(function(d){ return d.id === state.selectedId; });
+  }
+
+  function dishCardHtml(d){
+    var c = computeDish(d);
+    var cls = statusClass(c.actualFoodCostPct, d.targetFcos);
+    var pillHtml = c.actualFoodCostPct === null
+      ? ""
+      : '<span class="pill ' + cls + '">' + fmtPct(c.actualFoodCostPct) + '</span>';
+    var active = d.id === state.selectedId ? "active" : "";
+    var nameHtml = d.name ? escapeHtml(d.name) : '<span class="placeholder-name">Name of dish</span>';
+    return (
+      '<div class="dish-card ' + active + '" draggable="true" data-id="' + d.id + '">' +
+        '<div class="name"><span>' + nameHtml + '</span>' + pillHtml + '</div>' +
+        '<div class="meta"><span>Cost ' + fmt(c.costOfDish) + '</span><span>Price ' + fmt(d.actualPrice) + '</span></div>' +
+      '</div>'
+    );
+  }
+
+  function categoryGroupHtml(catName, dishesInCat, isSearching){
+    if(isSearching && !dishesInCat.length) return "";
+    var isUncat = catName === UNCATEGORIZED;
+    var collapsed = !!state.collapsed[catName || "__uncat__"];
+    var bodyContent = dishesInCat.length
+      ? dishesInCat.map(dishCardHtml).join("")
+      : '<div class="category-empty">Drag a dish here, or use the Folder field on a dish.</div>';
+    var actionsHtml = isUncat ? "" : (
+      '<span class="cat-actions">' +
+        '<button class="cat-icon-btn rename-cat-btn" data-cat="' + escapeHtml(catName) + '" title="Rename folder">✎</button>' +
+        '<button class="cat-icon-btn delete-cat-btn" data-cat="' + escapeHtml(catName) + '" title="Delete folder">🗑</button>' +
+      '</span>'
+    );
+    var label = isUncat ? "Unfiled" : escapeHtml(catName);
+    return (
+      '<div class="category-section">' +
+        '<div class="category-header' + (collapsed ? " collapsed" : "") + '" data-cat="' + escapeHtml(catName) + '">' +
+          '<span class="chevron">▾</span>' +
+          '<span class="cat-name">' + label + '</span>' +
+          '<span class="cat-count">' + dishesInCat.length + '</span>' +
+          actionsHtml +
+        '</div>' +
+        '<div class="category-body' + (collapsed ? " collapsed" : "") + '" data-cat="' + escapeHtml(catName) + '">' + bodyContent + '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderList(){
+    var q = state.search.trim().toLowerCase();
+    var filtered = state.dishes.filter(function(d){
+      return !q || d.name.toLowerCase().indexOf(q) !== -1;
+    });
+    var isSearching = !!q;
+
+    var order = [UNCATEGORIZED].concat(state.categories);
+    var html = order.map(function(catName){
+      var dishesInCat = filtered.filter(function(d){ return (d.category || UNCATEGORIZED) === catName; });
+      return categoryGroupHtml(catName, dishesInCat, isSearching);
+    }).join("");
+
+    if(isSearching && !filtered.length){
+      html = '<div class="empty-list">No dishes found.</div>';
+    }
+
+    dishListEl.innerHTML = html;
+
+    Array.prototype.forEach.call(dishListEl.querySelectorAll(".dish-card"), function(el){
+      el.addEventListener("click", function(){
+        state.selectedId = el.getAttribute("data-id");
+        state.mobileView = "editor";
+        renderAll();
+      });
+      el.addEventListener("dragstart", function(e){
+        el.classList.add("dragging");
+        e.dataTransfer.setData("text/plain", el.getAttribute("data-id"));
+        e.dataTransfer.effectAllowed = "move";
+      });
+      el.addEventListener("dragend", function(){
+        el.classList.remove("dragging");
+      });
+    });
+
+    Array.prototype.forEach.call(dishListEl.querySelectorAll(".category-header"), function(el){
+      el.addEventListener("click", function(e){
+        if(e.target.closest(".cat-icon-btn")) return;
+        var cat = el.getAttribute("data-cat");
+        var key = cat || "__uncat__";
+        state.collapsed[key] = !state.collapsed[key];
+        renderList();
+      });
+    });
+
+    Array.prototype.forEach.call(dishListEl.querySelectorAll(".rename-cat-btn"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        renameFolder(btn.getAttribute("data-cat"));
+      });
+    });
+    Array.prototype.forEach.call(dishListEl.querySelectorAll(".delete-cat-btn"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        deleteFolder(btn.getAttribute("data-cat"));
+      });
+    });
+
+    Array.prototype.forEach.call(dishListEl.querySelectorAll(".category-body"), function(body){
+      body.addEventListener("dragover", function(e){
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        body.classList.add("drag-over");
+      });
+      body.addEventListener("dragleave", function(){
+        body.classList.remove("drag-over");
+      });
+      body.addEventListener("drop", function(e){
+        e.preventDefault();
+        body.classList.remove("drag-over");
+        var dishId = e.dataTransfer.getData("text/plain");
+        var dish = state.dishes.find(function(d){ return d.id === dishId; });
+        if(!dish) return;
+        dish.category = body.getAttribute("data-cat") || UNCATEGORIZED;
+        saveDishes();
+        renderAll();
+      });
+    });
+  }
+
+  function addFolder(){
+    var name = (window.prompt("New folder name:", "") || "").trim();
+    if(!name) return;
+    if(name.toLowerCase() === "unfiled" || name.toLowerCase() === "uncategorized"){
+      alert('"' + name + '" is a reserved name. Please choose another.');
+      return;
+    }
+    var exists = state.categories.some(function(c){ return c.toLowerCase() === name.toLowerCase(); });
+    if(exists){ alert('A folder named "' + name + '" already exists.'); return; }
+    state.categories.push(name);
+    saveCategories();
+    renderAll();
+  }
+
+  function renameFolder(oldName){
+    var name = (window.prompt("Rename folder:", oldName) || "").trim();
+    if(!name || name === oldName) return;
+    if(name.toLowerCase() === "unfiled" || name.toLowerCase() === "uncategorized"){
+      alert('"' + name + '" is a reserved name. Please choose another.');
+      return;
+    }
+    var exists = state.categories.some(function(c){ return c.toLowerCase() === name.toLowerCase() && c !== oldName; });
+    if(exists){ alert('A folder named "' + name + '" already exists.'); return; }
+    state.categories = state.categories.map(function(c){ return c === oldName ? name : c; });
+    state.dishes.forEach(function(d){ if(d.category === oldName) d.category = name; });
+    saveCategories();
+    saveDishes();
+    renderAll();
+  }
+
+  function deleteFolder(name){
+    if(!confirm('Delete folder "' + name + '"? Dishes inside will move to Unfiled.')) return;
+    state.categories = state.categories.filter(function(c){ return c !== name; });
+    state.dishes.forEach(function(d){ if(d.category === name) d.category = UNCATEGORIZED; });
+    saveCategories();
+    saveDishes();
+    renderAll();
+  }
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function renderEditor(){
+    var dish = getSelectedDish();
+    if(!dish){
+      mainPanelEl.innerHTML = '<div class="empty-state">Select a dish on the left, or create a new one to get started.</div>';
+      return;
+    }
+    var c = computeDish(dish);
+    var cls = statusClass(c.actualFoodCostPct, dish.targetFcos);
+
+    var rowsHtml = dish.ingredients.map(function(ing, idx){
+      var total = lineTotal(ing);
+      return (
+        '<tr data-idx="' + idx + '">' +
+          '<td class="col-name"><input type="text" data-field="name" value="' + escapeHtml(ing.name) + '" placeholder="Ingredient"></td>' +
+          '<td class="col-qty"><input type="text" inputmode="decimal" data-field="qty" value="' + ing.qty + '"></td>' +
+          '<td class="col-unit"><input type="text" data-field="unit" value="' + escapeHtml(ing.unit) + '"></td>' +
+          '<td class="col-yield"><input type="text" inputmode="decimal" data-field="yieldPct" value="' + ing.yieldPct + '"></td>' +
+          '<td class="col-cost"><input type="text" inputmode="decimal" data-field="cost" value="' + ing.cost + '"></td>' +
+          '<td class="col-total row-total">' + fmt(total) + '</td>' +
+          '<td class="col-del"><button class="del-row-btn" data-del-idx="' + idx + '" title="Remove ingredient">&times;</button></td>' +
+        '</tr>'
+      );
+    }).join("");
+
+    var bannerText = c.actualFoodCostPct === null
+      ? "Enter an actual selling price to see food cost performance."
+      : (cls === "good"
+          ? "On target — actual food cost is at or below your " + dish.targetFcos + "% goal."
+          : cls === "warn"
+            ? "Slightly over target — actual food cost is above your " + dish.targetFcos + "% goal."
+            : "Over target — actual food cost is well above your " + dish.targetFcos + "% goal.");
+
+    var categoryOptionsHtml = '<option value=""' + (dish.category ? "" : " selected") + '>Unfiled</option>' +
+      state.categories.map(function(c){
+        return '<option value="' + escapeHtml(c) + '"' + (dish.category === c ? " selected" : "") + '>' + escapeHtml(c) + '</option>';
+      }).join("") +
+      '<option value="__new__">+ New folder…</option>';
+
+    mainPanelEl.innerHTML =
+      '<div class="dish-header">' +
+        '<button class="icon-btn back-btn" id="backToListBtn">‹ Dishes</button>' +
+        '<input type="text" class="dish-title-input" id="dishNameInput" placeholder="Name of dish" value="' + escapeHtml(dish.name) + '">' +
+        '<div class="header-actions">' +
+          '<button class="icon-btn" id="duplicateBtn">Duplicate</button>' +
+          '<button class="icon-btn danger" id="deleteBtn">Delete</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="sub-row">' +
+        '<div class="field"><label>Covers</label><input type="number" id="coversInput" min="1" value="' + dish.covers + '"></div>' +
+        '<div class="field"><label>Date</label><input type="date" id="dateInput" value="' + (dish.date || "") + '"></div>' +
+        '<div class="field"><label>Folder</label><select id="categorySelect">' + categoryOptionsHtml + '</select></div>' +
+      '</div>' +
+
+      '<div class="card">' +
+        '<h2>Ingredients</h2>' +
+        '<table class="ing-table">' +
+          '<thead><tr>' +
+            '<th class="col-name">Name</th><th class="col-qty">Qty</th><th class="col-unit">Unit</th>' +
+            '<th class="col-yield">Yield %</th><th class="col-cost">Cost / unit</th><th class="col-total">Total</th><th class="col-del"></th>' +
+          '</tr></thead>' +
+          '<tbody id="ingredientsBody">' + rowsHtml + '</tbody>' +
+        '</table>' +
+        '<button class="add-row-btn" id="addIngredientBtn">+ Add ingredient</button>' +
+      '</div>' +
+
+      '<div class="card">' +
+        '<h2>Pricing</h2>' +
+        '<div class="summary-grid">' +
+          '<div class="summary-row big"><span class="label">Cost of dish</span><span class="value" id="costOfDishValue">' + fmt(c.costOfDish) + '</span></div>' +
+          '<div class="summary-row"><span class="label">Target food cost %</span><span class="value"><input class="inline-input" type="text" inputmode="decimal" id="targetFcosInput" value="' + dish.targetFcos + '">% <span class="sub-note" id="targetMarginNote">(' + fmtPct(100 - (Number(dish.targetFcos)||0)) + ' margin)</span></span></div>' +
+          '<div class="summary-row"><span class="label">Recommended net price</span><span class="value" id="recNetPriceValue">' + fmt(c.recommendedNetPrice) + '</span></div>' +
+          '<div class="summary-row"><span class="label">MOMS / VAT %</span><span class="value"><input class="inline-input" type="text" inputmode="decimal" id="momsInput" value="' + dish.moms + '">%</span></div>' +
+          '<div class="summary-row"><span class="label">Recommended gross price</span><span class="value" id="grossPriceValue">' + fmt(c.grossPrice) + '</span></div>' +
+          '<div class="summary-row"><span class="label">Actual selling price</span><span class="value"><input class="inline-input" type="text" inputmode="decimal" id="actualPriceInput" value="' + dish.actualPrice + '"></span></div>' +
+          '<div class="summary-row big"><span class="label">Actual food cost %</span><span class="value" id="actualFoodCostValue">' + fmtPct(c.actualFoodCostPct) + ' <span class="sub-note" id="actualMarginNote">' + (c.actualFoodCostPct === null ? "" : "(" + fmtPct(100 - c.actualFoodCostPct) + " margin)") + '</span></span></div>' +
+          '<div class="summary-row big"><span class="label">Actual profit / dish (excl. VAT)</span><span class="value" id="actualProfitValue">' + fmt(c.actualProfit) + '</span></div>' +
+        '</div>' +
+        '<div class="status-banner ' + (cls || "warn") + '" id="statusBanner">' + bannerText + '</div>' +
+      '</div>';
+
+    attachEditorEvents(dish);
+  }
+
+  // Patches only the computed/derived numbers in the DOM (row totals, summary
+  // values, sidebar cards) without rebuilding any <input> elements. This keeps
+  // focus and cursor position intact while the user is typing.
+  function recalcAndPatch(dish){
+    var c = computeDish(dish);
+
+    Array.prototype.forEach.call(document.querySelectorAll("#ingredientsBody tr"), function(tr){
+      var idx = Number(tr.getAttribute("data-idx"));
+      var ing = dish.ingredients[idx];
+      if(!ing) return;
+      var cell = tr.querySelector(".row-total");
+      if(cell) cell.textContent = fmt(lineTotal(ing));
+    });
+
+    var elCost = document.getElementById("costOfDishValue");
+    if(elCost) elCost.textContent = fmt(c.costOfDish);
+    var elRec = document.getElementById("recNetPriceValue");
+    if(elRec) elRec.textContent = fmt(c.recommendedNetPrice);
+    var elGross = document.getElementById("grossPriceValue");
+    if(elGross) elGross.textContent = fmt(c.grossPrice);
+    var elActualFC = document.getElementById("actualFoodCostValue");
+    if(elActualFC) elActualFC.childNodes[0].textContent = fmtPct(c.actualFoodCostPct) + " ";
+    var elProfit = document.getElementById("actualProfitValue");
+    if(elProfit) elProfit.textContent = fmt(c.actualProfit);
+
+    var targetMarginNote = document.getElementById("targetMarginNote");
+    if(targetMarginNote) targetMarginNote.textContent = "(" + fmtPct(100 - (Number(dish.targetFcos) || 0)) + " margin)";
+
+    var actualMarginNote = document.getElementById("actualMarginNote");
+    if(actualMarginNote){
+      actualMarginNote.textContent = c.actualFoodCostPct === null ? "" : "(" + fmtPct(100 - c.actualFoodCostPct) + " margin)";
+    }
+
+    var banner = document.getElementById("statusBanner");
+    if(banner){
+      var cls = statusClass(c.actualFoodCostPct, dish.targetFcos);
+      var bannerText = c.actualFoodCostPct === null
+        ? "Enter an actual selling price to see food cost performance."
+        : (cls === "good"
+            ? "On target — actual food cost is at or below your " + dish.targetFcos + "% goal."
+            : cls === "warn"
+              ? "Slightly over target — actual food cost is above your " + dish.targetFcos + "% goal."
+              : "Over target — actual food cost is well above your " + dish.targetFcos + "% goal.");
+      banner.className = "status-banner " + (cls || "warn");
+      banner.textContent = bannerText;
+    }
+
+    renderList();
+  }
+
+  function attachEditorEvents(dish){
+    document.getElementById("backToListBtn").addEventListener("click", function(){
+      state.mobileView = "list";
+      renderAll();
+    });
+    document.getElementById("dishNameInput").addEventListener("input", function(e){
+      dish.name = e.target.value;
+      saveDishes();
+      renderList();
+    });
+    document.getElementById("coversInput").addEventListener("input", function(e){
+      dish.covers = Number(e.target.value) || 1;
+      saveDishes();
+    });
+    document.getElementById("dateInput").addEventListener("input", function(e){
+      dish.date = e.target.value;
+      saveDishes();
+    });
+    document.getElementById("categorySelect").addEventListener("change", function(e){
+      var val = e.target.value;
+      if(val === "__new__"){
+        var name = (window.prompt("New folder name:", "") || "").trim();
+        if(!name || name.toLowerCase() === "unfiled" || name.toLowerCase() === "uncategorized"){
+          renderAll();
+          return;
+        }
+        var exists = state.categories.some(function(c){ return c.toLowerCase() === name.toLowerCase(); });
+        if(!exists){
+          state.categories.push(name);
+          saveCategories();
+        }
+        dish.category = exists ? state.categories.filter(function(c){ return c.toLowerCase() === name.toLowerCase(); })[0] : name;
+      } else {
+        dish.category = val;
+      }
+      saveDishes();
+      renderAll();
+    });
+    document.getElementById("duplicateBtn").addEventListener("click", function(){
+      var copy = JSON.parse(JSON.stringify(dish));
+      copy.id = uid();
+      copy.name = dish.name ? dish.name + " (copy)" : "";
+      state.dishes.push(copy);
+      state.selectedId = copy.id;
+      state.mobileView = "editor";
+      saveDishes();
+      renderAll();
+    });
+    document.getElementById("deleteBtn").addEventListener("click", function(){
+      if(!confirm('Delete "' + dish.name + '"? This cannot be undone.')) return;
+      state.dishes = state.dishes.filter(function(d){ return d.id !== dish.id; });
+      state.selectedId = state.dishes.length ? state.dishes[0].id : null;
+      state.mobileView = "list";
+      saveDishes();
+      renderAll();
+    });
+    document.getElementById("addIngredientBtn").addEventListener("click", function(){
+      dish.ingredients.push(blankIngredient());
+      saveDishes();
+      renderAll();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#targetFcosInput, #momsInput, #actualPriceInput'), function(input){
+      input.addEventListener("focus", function(){
+        if(input.value === "0") input.value = "";
+      });
+    });
+    document.getElementById("targetFcosInput").addEventListener("input", function(e){
+      var parsed = parseFloat(e.target.value);
+      if(!isNaN(parsed)) dish.targetFcos = parsed;
+      saveDishes();
+      recalcAndPatch(dish);
+    });
+    document.getElementById("momsInput").addEventListener("input", function(e){
+      var parsed = parseFloat(e.target.value);
+      if(!isNaN(parsed)) dish.moms = parsed;
+      saveDishes();
+      recalcAndPatch(dish);
+    });
+    document.getElementById("actualPriceInput").addEventListener("input", function(e){
+      var parsed = parseFloat(e.target.value);
+      if(!isNaN(parsed)) dish.actualPrice = parsed;
+      saveDishes();
+      recalcAndPatch(dish);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll("#ingredientsBody tr"), function(tr){
+      var idx = Number(tr.getAttribute("data-idx"));
+      Array.prototype.forEach.call(tr.querySelectorAll("input"), function(input){
+        input.addEventListener("focus", function(){
+          if(input.value === "0") input.value = "";
+        });
+        input.addEventListener("input", function(){
+          var field = input.getAttribute("data-field");
+          var ing = dish.ingredients[idx];
+          if(field === "qty" || field === "yieldPct" || field === "cost"){
+            var parsed = parseFloat(input.value);
+            if(!isNaN(parsed)) ing[field] = parsed;
+            saveDishes();
+            recalcAndPatch(dish);
+          } else {
+            ing[field] = input.value;
+            saveDishes();
+          }
+        });
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".del-row-btn"), function(btn){
+      btn.addEventListener("click", function(){
+        var idx = Number(btn.getAttribute("data-del-idx"));
+        dish.ingredients.splice(idx, 1);
+        saveDishes();
+        renderAll();
+      });
+    });
+  }
+
+  function renderAll(){
+    renderList();
+    renderEditor();
+    document.body.classList.toggle("mobile-editor-view", state.mobileView === "editor" && !!state.selectedId);
+  }
+
+  // ---------- Global controls ----------
+  document.getElementById("searchInput").addEventListener("input", function(e){
+    state.search = e.target.value;
+    renderList();
+  });
+
+  document.getElementById("newDishBtn").addEventListener("click", function(){
+    var d = blankDish();
+    state.dishes.unshift(d);
+    state.selectedId = d.id;
+    state.mobileView = "editor";
+    saveDishes();
+    renderAll();
+  });
+
+  document.getElementById("newFolderBtn").addEventListener("click", function(){
+    addFolder();
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(state.dishes, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "dish-costing-backup.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("importBtn").addEventListener("click", function(){
+    document.getElementById("importFile").click();
+  });
+  document.getElementById("importFile").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      try{
+        var parsed = JSON.parse(evt.target.result);
+        if(!Array.isArray(parsed)) throw new Error("Invalid file");
+        var confirmed = confirm("Import " + parsed.length + " dish(es)? This will be added to your current list.");
+        if(!confirmed) return;
+        parsed.forEach(function(d){ d.id = uid(); if(typeof d.category !== "string") d.category = UNCATEGORIZED; });
+        state.dishes = state.dishes.concat(parsed);
+        saveDishes();
+        renderAll();
+      }catch(err){
+        alert("Could not import this file: " + err.message);
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
